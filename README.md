@@ -2,10 +2,26 @@
 
 A free, minimal Node.js bot that moderates links in the configured WhatsApp
 group. It replies to unapproved links with a warning and gives the sender two
-minutes to remove the link. If the link is removed in time, the bot removes its
-warning and sends a polite thank-you message in Tamil. Otherwise, it attempts
-to delete both the link and its warning. The default allowlist is empty, so all
-detected links are treated as unapproved.
+minutes to remove the link. The warning remains in the group in either case.
+If the link is removed in time, the bot sends a polite thank-you message in
+Tamil. Otherwise, it attempts to delete the link and sends a courteous removal
+notice in Tamil. Both follow-up replies quote the original link message. All
+bot replies end with “இங்ஙனம், நமது ஊர் உறவுகள்”. The bot addresses the member
+by their WhatsApp display name, or by phone number when a display name is
+unavailable. Links on configured payment-provider
+domains are allowed automatically. WhatsApp links are exempt only when their
+path is `/pay` or `/payments`; other WhatsApp links are still moderated.
+
+In the configured group, the bot also uses OCR to look for payment-service or
+transaction terms together with a payment status, amount, or transaction
+reference in uploaded images. When both kinds of clues are detected, it replies
+with a Tamil welcome and thanks; ordinary photos without payment text are
+ignored. Links in a recognized payment-image message are not moderated. OCR
+recognizes text; it does not verify that a payment is genuine.
+The terminal reports whether OCR found each kind of clue, without printing
+recognized image text. On first use, Tesseract downloads English and Tamil
+language data and caches it under `node_modules/.cache/tesseract`, so the bot
+needs internet access.
 
 The bot only moderates the group whose name matches `TARGET_GROUP_NAME` in
 `index.js` (currently `ABCD!`). The comparison ignores capitalization and
@@ -24,7 +40,7 @@ leading/trailing spaces.
 3. Scan the QR code with WhatsApp under **Settings > Linked devices > Link a
    device**.
 4. Add the linked account to your group and promote it to admin so it can
-   delete messages after the two-minute grace period and remove its warnings.
+   delete link messages after the two-minute grace period.
 
 Make sure the group's name matches `TARGET_GROUP_NAME` in `index.js`. If you
 rename the group, update this setting and restart the bot.
@@ -35,7 +51,8 @@ excluded from Git by `.gitignore`.
 
 ## Allow trusted domains
 
-Edit `ALLOWED_DOMAINS` near the top of `index.js`, for example:
+Edit `ALLOWED_DOMAINS` near the top of `index.js` to add more trusted domains,
+for example:
 
 ```js
 const ALLOWED_DOMAINS = ["example.com", "news.example.org"];
