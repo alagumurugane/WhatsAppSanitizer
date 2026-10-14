@@ -23,13 +23,26 @@ recognized image text. On first use, Tesseract downloads English and Tamil
 language data and caches it under `node_modules/.cache/tesseract`, so the bot
 needs internet access.
 
-The bot only moderates the group whose name matches `TARGET_GROUP_NAME` in
-`index.js` (currently `ABCD!`). The comparison ignores capitalization and
-leading/trailing spaces.
+The bot moderates the group named by `targetGroupName` in `config.json`
+(currently `ABCD!`). The comparison ignores capitalization and leading/trailing
+spaces.
+
+When connected, the bot sets the linked WhatsApp account's profile name to
+`Uravukal Bot` and applies the bot avatar in `bot-logo.svg` as its profile
+picture. Profile changes require the linked account to be online.
+
+The bot also posts a Tamil morning greeting with a rotating Thirukkural,
+short moral story, or saying to that group every day at the configured time.
+Edit `dailyGreeting.sendAt`, `dailyGreeting.timeZone`, and the `dailyGreeting.messages`
+list in `config.json` to change the schedule or content. The default is 2:15 PM
+India time (`Asia/Kolkata`). The bot must be online and in the group when the
+message is due; it does not send missed greetings later.
 
 ## Requirements
 
 - Node.js 20 or newer
+- The bot avatar uses the `sharp` image-processing package, installed by
+  `npm install`
 - A WhatsApp account to link to the bot
 - Group-admin approval to add the bot to the group and promote it to admin
 
@@ -42,7 +55,7 @@ leading/trailing spaces.
 4. Add the linked account to your group and promote it to admin so it can
    delete link messages after the two-minute grace period.
 
-Make sure the group's name matches `TARGET_GROUP_NAME` in `index.js`. If you
+Make sure the group's name matches `targetGroupName` in `config.json`. If you
 rename the group, update this setting and restart the bot.
 
 The linked-device session is stored in `auth_info_baileys/`. Keep that folder

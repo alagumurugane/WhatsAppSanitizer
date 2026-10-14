@@ -10,6 +10,8 @@ const path = require("node:path");
 const pino = require("pino");
 const qrcode = require("qrcode-terminal");
 const { createWorker } = require("tesseract.js");
+const config = require("./config.json");
+const { scheduleDailyGreeting } = require("./daily-greeting");
 
 // Official payment domains are exempt from link moderation.
 const ALLOWED_DOMAINS = [
@@ -20,7 +22,9 @@ const ALLOWED_DOMAINS = [
   "paytm.com",
   "paytm.me",
 ];
-const TARGET_GROUP_NAME = "ABCD!";
+const TARGET_GROUP_NAME = config.targetGroupName;
+const BOT_PROFILE_NAME = "Uravukal Bot";
+const BOT_PROFILE_PICTURE_PATH = path.join(__dirname, "bot-logo.svg");
 const DELETE_GRACE_PERIOD_MS = 2 * 60 * 1000;
 const SIGNATURE = "இங்ஙனம்,\nநமது ஊர் உறவுகள்";
 const OCR_CACHE_PATH = path.join(
@@ -55,6 +59,27 @@ function getMemberName(message) {
 
 function buildMemberReply(memberName, text) {
   return withSignature(`${memberName}, ${text}`);
+}
+
+async function applyBotProfile(sock) {
+  try {
+    await sock.updateProfileName(BOT_PROFILE_NAME);
+    console.log(`WhatsApp profile name set to "${BOT_PROFILE_NAME}".`);
+  } catch (error) {
+    console.error("Could not update the WhatsApp profile name:", error);
+  }
+
+  try {
+    if (!sock.user?.id) {
+      throw new Error("The connected WhatsApp account ID is unavailable.");
+    }
+    await sock.updateProfilePicture(sock.user.id, {
+      url: BOT_PROFILE_PICTURE_PATH,
+    });
+    console.log("WhatsApp bot profile picture updated.");
+  } catch (error) {
+    console.error("Could not update the WhatsApp bot profile picture:", error);
+  }
 }
 
 function getText(message) {
@@ -165,6 +190,7 @@ async function startBot() {
     auth: state,
     logger: pino({ level: "silent" }),
   });
+  let cancelDailyGreeting;
 
   sock.ev.on("creds.update", saveCreds);
 
@@ -174,8 +200,22 @@ async function startBot() {
       qrcode.generate(qr, { small: true });
     }
 
-    if (connection === "open") console.log("WhatsApp bot connected.");
+    if (connection === "open") {
+      console.log("WhatsApp bot connected.");
+      applyBotProfile(sock).catch((error) => {
+        console.error("Could not apply the WhatsApp bot profile:", error);
+      });
+      if (!cancelDailyGreeting) {
+        try {
+          cancelDailyGreeting = scheduleDailyGreeting(sock, config);
+        } catch (error) {
+          console.error("Could not schedule the Tamil morning greeting:", error);
+        }
+      }
+    }
     if (connection === "close") {
+      cancelDailyGreeting?.();
+      cancelDailyGreeting = undefined;
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       if (statusCode !== DisconnectReason.loggedOut) {
         console.log("Connection closed; reconnecting...");
